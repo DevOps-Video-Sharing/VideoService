@@ -1,13 +1,13 @@
-package com.programming.streaming.service;
+package com.programming.videoService.service;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.client.gridfs.model.GridFSFile;
-import com.programming.streaming.model.Like;
-import com.programming.streaming.model.Subscription;
-import com.programming.streaming.model.Video;
-import com.programming.streaming.repository.LikeRepository;
-import com.programming.streaming.repository.SubscriptionRepository;
+import com.programming.videoService.model.Like;
+import com.programming.videoService.model.Subscription;
+import com.programming.videoService.model.Video;
+import com.programming.videoService.repository.LikeRepository;
+import com.programming.videoService.repository.SubscriptionRepository;
 
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;

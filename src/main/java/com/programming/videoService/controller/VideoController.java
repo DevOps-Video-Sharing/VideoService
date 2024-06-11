@@ -1,8 +1,8 @@
-package com.programming.streaming.controller;
+package com.programming.videoService.controller;
 
 import com.mongodb.client.gridfs.model.GridFSFile;
-import com.programming.streaming.service.VideoService;
-import com.programming.streaming.service.VideoService.VideoWithStream;
+import com.programming.videoService.service.VideoService;
+import com.programming.videoService.service.VideoService.VideoWithStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;

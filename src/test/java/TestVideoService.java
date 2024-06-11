@@ -8,7 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(classes = com.programming.streaming.StreamingApplication.class)
+@SpringBootTest(classes = com.programming.videoService.StreamingApplication.class)
 @AutoConfigureMockMvc
 public class TestVideoService {
 

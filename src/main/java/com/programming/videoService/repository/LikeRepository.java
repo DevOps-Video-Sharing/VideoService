@@ -1,7 +1,7 @@
-package com.programming.streaming.repository;
+package com.programming.videoService.repository;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
-import com.programming.streaming.model.Like;
+import com.programming.videoService.model.Like;
 public interface LikeRepository extends MongoRepository<Like, String>{
     void deleteByLikerToIdAndLikedToId(String likerToId, String likedToId);
 

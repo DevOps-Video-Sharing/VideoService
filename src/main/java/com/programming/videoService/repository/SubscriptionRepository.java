@@ -1,6 +1,6 @@
-package com.programming.streaming.repository;
+package com.programming.videoService.repository;
 
-import com.programming.streaming.model.Subscription;
+import com.programming.videoService.model.Subscription;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 

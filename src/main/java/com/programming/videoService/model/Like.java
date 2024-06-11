@@ -1,4 +1,4 @@
-package com.programming.streaming.model;
+package com.programming.videoService.model;
 
 public class Like {
     private String likerToId;
