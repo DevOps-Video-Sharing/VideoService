@@ -1,9 +1,10 @@
 name: Continuous Deployment for Video Service
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Continuous Integration for Video Service"]
+    types:
+      - completed
 
 env:
   PROJECT_ID: gke-project-423206
@@ -40,16 +41,6 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
           install_components: 'gke-gcloud-auth-plugin'
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v1
-        with:
-          username: datuits
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-      - name: Build and Push the docker image
-        run: |
-          docker build -t datuits/devops-video-service:latest .
-          docker push datuits/devops-video-service:latest
 
       - name: Set cluster context
         run: |
