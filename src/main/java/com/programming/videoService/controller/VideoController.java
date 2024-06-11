@@ -27,6 +27,11 @@ public class VideoController {
     @Autowired
     private VideoService videoService;
 
+    @GetMapping("/")
+    public String getServiceName(){
+        return "Video Service";
+    }
+
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,
             @RequestParam("userID") String userID,
