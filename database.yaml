@@ -21,8 +21,11 @@ spec:
         - name: MONGO_INITDB_DATABASE
           value: video-service
         resources:
+          requests:
+            memory: "16Mi"
+            cpu: "0.1"
           limits:
-            memory: "128Mi"
+            memory: "32Mi"
             cpu: "0.2"
         volumeMounts:
         - name: mongo-storage
@@ -38,7 +41,7 @@ metadata:
   name: video-mongo-pv
 spec:
   capacity:
-    storage: 256Mi
+    storage: 60Mi
   accessModes:
     - ReadWriteOnce
   gcePersistentDisk:
@@ -54,7 +57,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 256Mi
+      storage: 60Mi
 ---
 apiVersion: v1
 kind: Service
