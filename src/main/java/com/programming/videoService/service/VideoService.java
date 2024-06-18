@@ -3,9 +3,11 @@ package com.programming.videoService.service;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import com.programming.videoService.model.History;
 import com.programming.videoService.model.Like;
 import com.programming.videoService.model.Subscription;
 import com.programming.videoService.model.Video;
+import com.programming.videoService.repository.HistoryRepository;
 import com.programming.videoService.repository.LikeRepository;
 import com.programming.videoService.repository.SubscriptionRepository;
 
@@ -25,8 +27,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class VideoService {
@@ -119,6 +124,17 @@ public class VideoService {
     public void updateDislikes(String id) {
         Query query = new Query(Criteria.where("_id").is(id));
         Update update = new Update().inc("dislikes", 1);
+        mongoTemplate.updateFirst(query, update, "fs.files");
+    }
+
+    public void editDescription(String id, String description) {
+        Query query = new Query(Criteria.where("_id").is(id));
+        Update update = new Update().set("metadata.description", description);
+        mongoTemplate.updateFirst(query, update, "fs.files");
+    }
+    public void editVideoName(String id, String videoName) {
+        Query query = new Query(Criteria.where("_id").is(id));
+        Update update = new Update().set("metadata.videoName", videoName);
         mongoTemplate.updateFirst(query, update, "fs.files");
     }
 
@@ -215,5 +231,30 @@ public class VideoService {
 
         return likedToIds;
     }
+
+    //Hanlde History
+
+    @Autowired
+    private HistoryRepository historyRepository;
+    
+    public void addHistory(String userId, String thumbId) {
+        History history = new History(userId, thumbId);
+        historyRepository.save(history);
+    }
+
+    public List<String> getHistoryByUserId(String userId) {
+        Query query = new Query(Criteria.where("userId").is(userId)).with(Sort.by(Sort.Direction.DESC, "timestamp"));
+        List<History> histories = mongoTemplate.find(query, History.class);
+
+        Map<String, History> thumbIdMap = new LinkedHashMap<>();
+        for (History history : histories) {
+            thumbIdMap.putIfAbsent(history.getThumbId(), history);
+        }
+
+        List<String> thumbIds = new ArrayList<>(thumbIdMap.keySet());
+
+        return thumbIds;
+    }
+
     
 }

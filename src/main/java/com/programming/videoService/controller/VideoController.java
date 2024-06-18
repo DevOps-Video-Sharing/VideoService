@@ -24,14 +24,15 @@ import java.util.Map;
 @RequestMapping("/video")
 public class VideoController {
 
-    @Autowired
-    private VideoService videoService;
-
     @GetMapping("/")
     public String getServiceName(){
         return "Video Service";
     }
+    
+    @Autowired
+    private VideoService videoService;
 
+    @CrossOrigin(origins = "*")
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,
             @RequestParam("userID") String userID,
@@ -41,10 +42,12 @@ public class VideoController {
             @RequestParam("thumbnail") MultipartFile thumbnailFile) throws IOException {
         byte[] thumbnail = thumbnailFile.getBytes();
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-        return new ResponseEntity<>(videoService.addVideo(file, userID, thumbnail, timestamp, description, userName, videoName), HttpStatus.OK);
+        return new ResponseEntity<>(
+                videoService.addVideo(file, userID, thumbnail, timestamp, description, userName, videoName),
+                HttpStatus.OK);
     }
 
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/get/{id}")
     public ResponseEntity<?> download(@PathVariable String id,
             @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader) throws IOException {
@@ -90,51 +93,74 @@ public class VideoController {
                 .body(inputStreamResource);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/getDetails/{videoId}")
     public Map<String, Object> getVideoDetails(@PathVariable String videoId) {
         return videoService.getDetails(videoId);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/getDetailsByUserId/{userId}")
     public ResponseEntity<?> getVideoDetailsByUserId(@PathVariable String userId) {
         return new ResponseEntity<>(videoService.getDetailsByUserId(userId), HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/getAllIds")
     public ResponseEntity<?> getAllID() {
         return new ResponseEntity<>(videoService.getAllVideoIDs(), HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/listIdThumbnail")
     public ResponseEntity<?> listIdThumbnail() {
         return new ResponseEntity<>(videoService.listIdThumbnail(), HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/getThumbnailIdByUserId/{id}")
     public ResponseEntity<?> getThumbnailIdByUserId(@PathVariable String id) {
         return new ResponseEntity<>(videoService.getThumbnailIdByUserId(id), HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/getVideoIdFromThumbnailId/{id}")
     public ResponseEntity<?> getVideoIdFromThumbnailId(@PathVariable String id) {
         return new ResponseEntity<>(videoService.getVideoIdFromThumbnailId(id), HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @PutMapping("/updateViews/{id}")
     public ResponseEntity<?> updateViews(@PathVariable String id) {
         videoService.updateViews(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @PutMapping("/updateLikes/{id}")
     public ResponseEntity<?> updateLikes(@PathVariable String id) {
         videoService.updateLikes(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @PutMapping("/updateDislikes/{id}")
     public ResponseEntity<?> updateDislikes(@PathVariable String id) {
         videoService.updateDislikes(id);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @CrossOrigin(origins = "*")
+    @PutMapping("/editDescription/{id}")
+    public ResponseEntity<?> editDescription(@PathVariable String id, @RequestParam("description") String description) {
+        videoService.editDescription(id, description);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @CrossOrigin(origins = "*")
+    @PutMapping("/editVideoName/{id}")
+    public ResponseEntity<?> editVideoName(@PathVariable String id, @RequestParam("videoName") String videoName) {
+        videoService.editVideoName(id, videoName);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
@@ -173,8 +199,8 @@ public class VideoController {
         }
     }
 
-
-    //Hanlde Subcri
+    // Hanlde Subcri
+    @CrossOrigin(origins = "*")
     @PostMapping("/subscribe")
     public ResponseEntity<?> subscribe(@RequestParam("subscriberId") String subscriberId,
             @RequestParam("subscribedToId") String subscribedToId) {
@@ -182,6 +208,7 @@ public class VideoController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @PostMapping("/unsubscribe")
     public ResponseEntity<?> unsubscribe(@RequestParam("subscriberId") String subscriberId,
             @RequestParam("subscribedToId") String subscribedToId) {
@@ -189,21 +216,23 @@ public class VideoController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/isSubscribed")
     public ResponseEntity<Boolean> isSubscribed(@RequestParam("subscriberId") String subscriberId,
             @RequestParam("subscribedToId") String subscribedToId) {
         boolean isSubscribed = videoService.isSubscribed(subscriberId, subscribedToId);
         return new ResponseEntity<>(isSubscribed, HttpStatus.OK);
     }
-    
+
+    @CrossOrigin(origins = "*")
     @GetMapping("/getSubscriberCount")
     public ResponseEntity<Long> getSubscriberCount(@RequestParam("userId") String userId) {
         long subscriberCount = videoService.getSubscriberCount(userId);
         return new ResponseEntity<>(subscriberCount, HttpStatus.OK);
     }
 
-
-    //Handle Like
+    // Handle Like
+    @CrossOrigin(origins = "*")
     @PostMapping("/like")
     public ResponseEntity<?> like(@RequestParam("likerToId") String likerToId,
             @RequestParam("likedToId") String likedToId) {
@@ -211,6 +240,7 @@ public class VideoController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @PostMapping("/unlike")
     public ResponseEntity<?> unlike(@RequestParam("likerToId") String likerToId,
             @RequestParam("likedToId") String likedToId) {
@@ -218,6 +248,7 @@ public class VideoController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/isLiked")
     public ResponseEntity<Boolean> isLiked(@RequestParam("likerToId") String likerToId,
             @RequestParam("likedToId") String likedToId) {
@@ -225,16 +256,34 @@ public class VideoController {
         return new ResponseEntity<>(isLiked, HttpStatus.OK);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/getLikeCount")
     public ResponseEntity<Long> getLikeCount(@RequestParam("videoId") String videoId) {
         long likeCount = videoService.getLikeCount(videoId);
         return new ResponseEntity<>(likeCount, HttpStatus.OK);
     }
 
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/getIdFromLikerToId/{likerToId}")
     public ResponseEntity<?> getIdFromLikerToId(@PathVariable String likerToId) {
         return new ResponseEntity<>(videoService.getLikedToIdsFromLikerToId(likerToId), HttpStatus.OK);
     }
+
+    // Hanlde History
+    @CrossOrigin(origins = "*")
+    @PostMapping("/addHistory")
+    public ResponseEntity<?> addHistory(@RequestParam("userId") String userId,
+            @RequestParam("thumbId") String thumbId) {
+        videoService.addHistory(userId, thumbId);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @CrossOrigin(origins = "*")
+    @GetMapping("/getHistoryByUserId/{userId}")
+    public ResponseEntity<?> getHistoryByUserId(@PathVariable String userId) {
+        return new ResponseEntity<>(videoService.getHistoryByUserId(userId), HttpStatus.OK);
+    }
+
+    
     
 }
