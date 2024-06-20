@@ -31,15 +31,9 @@ jobs:
     uses: ./.github/workflows/SonarQube.yaml
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      
-  build-image:
-    needs: testing
-    uses: ./.github/workflows/build-image.yaml
-    secrets:
-      DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
   scan-image:
-    needs: build-image
+    needs: sonar_cloud_scan
     uses: ./.github/workflows/scan-image.yaml
 
   notify:
