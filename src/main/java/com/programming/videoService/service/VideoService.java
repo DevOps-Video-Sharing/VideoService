@@ -17,6 +17,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.mongodb.gridfs.GridFsOperations;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +41,11 @@ public class VideoService {
 
     @Autowired
     private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    private final String VIDEO_CACHE_PREFIX = "video_";
 
     public String addVideo(MultipartFile upload, String userID, byte[] thumbnail, Timestamp timestamp, String description, String userName, String videoName)
             throws IOException {
@@ -63,6 +70,17 @@ public class VideoService {
         thumbnailMetadata.put("videoName", videoName);
         template.store(new ByteArrayInputStream(thumbnail), upload.getOriginalFilename() + "_thumbnail", "image/png",
                 thumbnailMetadata);
+
+
+        // Save video information to Redis
+        Map<String, Object> videoDetails = new HashMap<>();
+        videoDetails.put("videoId", videoID.toString());
+        videoDetails.put("userID", userID);
+        videoDetails.put("title", videoName);
+        videoDetails.put("description", description);
+        videoDetails.put("views", 0);
+        redisTemplate.opsForHash().putAll(VIDEO_CACHE_PREFIX + videoID.toString(), videoDetails);
+
 
         return videoID.toString();
     }
@@ -149,11 +167,25 @@ public class VideoService {
     }
 
     public Map<String, Object> getDetails(String videoId) {
+        // Checked data in Redis
+        Map<Object, Object> cachedVideo = redisTemplate.opsForHash().entries(VIDEO_CACHE_PREFIX + videoId);
+
+        if (!cachedVideo.isEmpty()) {
+            // Convert cachedVideo to Map<String, Object>
+            Map<String, Object> stringKeyVideoMap = new HashMap<>();
+            cachedVideo.forEach((key, value) -> stringKeyVideoMap.put(String.valueOf(key), value));
+            return stringKeyVideoMap;
+        }
+
         Query query = new Query(Criteria.where("_id").is(videoId));
         DBObject dbObject = mongoTemplate.findOne(query, DBObject.class, "fs.files");
         if (dbObject != null) {
-            return dbObject.toMap();
+            Map<String, Object> videoDetails = dbObject.toMap();
+            // Save video information to Redis
+            redisTemplate.opsForHash().putAll(VIDEO_CACHE_PREFIX + videoId, videoDetails);
+            return videoDetails;
         }
+
         return null;
     }
 
