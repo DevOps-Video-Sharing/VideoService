@@ -1,8 +1,11 @@
 package com.programming.videoService.controller;
 
 import com.mongodb.client.gridfs.model.GridFSFile;
+import com.programming.videoService.model.Video;
 import com.programming.videoService.service.VideoService;
 import com.programming.videoService.service.VideoService.VideoWithStream;
+
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;
@@ -20,15 +23,21 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+
 @RestController
 @RequestMapping("/video")
 public class VideoController {
 
     @Autowired
     private VideoService videoService;
-
+    private static final Logger logger = LoggerFactory.getLogger(VideoController.class);
     @GetMapping("/")
     public String getServiceName(){
+        MDC.put("type", "videoservice");
+        logger.info("Video Service Start");
         return "Video Service";
     }
 
