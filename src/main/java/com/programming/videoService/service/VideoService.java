@@ -88,7 +88,7 @@ public class VideoService {
 
         MDC.put("type", "videoservice");
         MDC.put("action", "upload");
-        logger.info("VideoId: " + videoID.toString());
+        logger.info(userID.toString() + " upload videoId: " + videoID.toString());
         return videoID.toString();
     }
 
@@ -124,7 +124,7 @@ public class VideoService {
     public VideoWithStream getVideoWithStream(String id) throws IOException {
         GridFSFile gridFSFile = template.findOne(new Query(Criteria.where("_id").is(id)));
         MDC.put("type", "videoservice");
-        MDC.put("action", "getVideo");
+        MDC.put("action", "play-video");
         logger.info("VideoId: " + id);
         if (gridFSFile != null) {
             return new VideoWithStream(gridFSFile, operations.getResource(gridFSFile).getInputStream());
