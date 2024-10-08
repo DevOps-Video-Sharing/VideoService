@@ -20,15 +20,23 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.Map;
 
+//ELK
+import org.slf4j.MDC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @RequestMapping("/video")
 public class VideoController {
 
+    private static final Logger logger = LoggerFactory.getLogger(VideoController.class);
     @Autowired
     private VideoService videoService;
 
     @GetMapping("/")
     public String getServiceName(){
+        MDC.put("type", "videoservice");
+        logger.info("Video Service Start");
         return "Video Service";
     }
 
