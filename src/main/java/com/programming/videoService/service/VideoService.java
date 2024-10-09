@@ -10,6 +10,7 @@ import com.programming.videoService.repository.LikeRepository;
 import com.programming.videoService.repository.SubscriptionRepository;
 
 import org.bson.types.ObjectId;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -28,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @Service
 public class VideoService {
 
@@ -40,6 +43,7 @@ public class VideoService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
+    private static final Logger logger = LoggerFactory.getLogger(VideoService.class);
     public String addVideo(MultipartFile upload, String userID, byte[] thumbnail, Timestamp timestamp, String description, String userName, String videoName)
             throws IOException {
         DBObject videoMetadata = new BasicDBObject();
@@ -64,6 +68,10 @@ public class VideoService {
         template.store(new ByteArrayInputStream(thumbnail), upload.getOriginalFilename() + "_thumbnail", "image/png",
                 thumbnailMetadata);
 
+        MDC.put("type", "videoservice");
+        MDC.put("action", "upload");
+        MDC.put("videoid", videoID.toString());
+        logger.info("User " + userID.toString() + " upload a new video");
         return videoID.toString();
     }
 
@@ -98,6 +106,9 @@ public class VideoService {
 
     public VideoWithStream getVideoWithStream(String id) throws IOException {
         GridFSFile gridFSFile = template.findOne(new Query(Criteria.where("_id").is(id)));
+        MDC.put("type", "videoservice");
+        MDC.put("action", "play-video");
+        logger.info("VideoId: " + id);
         if (gridFSFile != null) {
             return new VideoWithStream(gridFSFile, operations.getResource(gridFSFile).getInputStream());
         }
