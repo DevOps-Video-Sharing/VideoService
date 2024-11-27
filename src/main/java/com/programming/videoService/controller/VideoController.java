@@ -183,7 +183,7 @@ public class VideoController {
     }
 
 
-    //Hanlde Subcri
+    //Hanlde Subcribe
     @PostMapping("/subscribe")
     public ResponseEntity<?> subscribe(@RequestParam("subscriberId") String subscriberId,
             @RequestParam("subscribedToId") String subscribedToId) {
@@ -244,6 +244,33 @@ public class VideoController {
     @GetMapping("/getIdFromLikerToId/{likerToId}")
     public ResponseEntity<?> getIdFromLikerToId(@PathVariable String likerToId) {
         return new ResponseEntity<>(videoService.getLikedToIdsFromLikerToId(likerToId), HttpStatus.OK);
+    }
+
+    // Hanlde History
+    @PostMapping("/addHistory")
+    public ResponseEntity<?> addHistory(@RequestParam("userId") String userId,
+            @RequestParam("thumbId") String thumbId) {
+        videoService.addHistory(userId, thumbId);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/getHistoryByUserId/{userId}")
+    public ResponseEntity<?> getHistoryByUserId(@PathVariable String userId) {
+        return new ResponseEntity<>(videoService.getHistoryByUserId(userId), HttpStatus.OK);
+    }
+
+    //handle Report
+    @PostMapping("/uploadReport")
+    public ResponseEntity<?> uploadReport(@RequestParam("videoId") String videoId,
+            @RequestParam("msg") String msg,
+            @RequestParam("userId") String userId) {
+        videoService.uploadReport(videoId, msg, userId);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/videoIdLargerThanFive")
+    public ResponseEntity<?> videoIdLargerThanFive() {
+        return new ResponseEntity<>(videoService.getReportsWithHighFrequencyVideoIds(), HttpStatus.OK);
     }
     
 }

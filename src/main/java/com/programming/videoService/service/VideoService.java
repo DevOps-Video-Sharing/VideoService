@@ -3,9 +3,12 @@ package com.programming.videoService.service;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import com.programming.videoService.model.History;
 import com.programming.videoService.model.Like;
+import com.programming.videoService.model.Report;
 import com.programming.videoService.model.Subscription;
 import com.programming.videoService.model.Video;
+import com.programming.videoService.repository.HistoryRepository;
 import com.programming.videoService.repository.LikeRepository;
 import com.programming.videoService.repository.SubscriptionRepository;
 
@@ -26,11 +29,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
+
 @Service
 public class VideoService {
 
@@ -225,6 +232,55 @@ public class VideoService {
         }
 
         return likedToIds;
+    }
+
+    //Hanlde History
+
+    @Autowired
+    private HistoryRepository historyRepository;
+    
+    public void addHistory(String userId, String thumbId) {
+        History history = new History(userId, thumbId);
+        historyRepository.save(history);
+    }
+
+    public List<String> getHistoryByUserId(String userId) {
+        Query query = new Query(Criteria.where("userId").is(userId)).with(Sort.by(Sort.Direction.DESC, "timestamp"));
+        List<History> histories = mongoTemplate.find(query, History.class);
+
+        Map<String, History> thumbIdMap = new LinkedHashMap<>();
+        for (History history : histories) {
+            thumbIdMap.putIfAbsent(history.getThumbId(), history);
+        }
+
+        List<String> thumbIds = new ArrayList<>(thumbIdMap.keySet());
+
+        return thumbIds;
+    }
+
+    //hanlde Report
+    public void uploadReport(String videoId, String msg, String userId) {
+        Report report = new Report(videoId, msg, userId);
+        mongoTemplate.save(report);
+    }
+
+    public List<String> getReportsWithHighFrequencyVideoIds() {
+        List<Report> reports = mongoTemplate.findAll(Report.class);
+        Map<String, Integer> videoIdCount = new HashMap<>();
+
+        for (Report report : reports) {
+            String videoId = report.getVideoId();
+            videoIdCount.put(videoId, videoIdCount.getOrDefault(videoId, 0) + 1);
+        }
+
+        List<String> highFrequencyVideoIds = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : videoIdCount.entrySet()) {
+            if (entry.getValue() > 5) {
+                highFrequencyVideoIds.add(entry.getKey());
+            }
+        }
+
+        return highFrequencyVideoIds;
     }
     
 }
