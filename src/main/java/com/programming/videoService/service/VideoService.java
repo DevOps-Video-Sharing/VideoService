@@ -3,13 +3,25 @@ package com.programming.videoService.service;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import com.programming.videoService.model.History;
 import com.programming.videoService.model.Like;
+import com.programming.videoService.model.Report;
 import com.programming.videoService.model.Subscription;
 import com.programming.videoService.model.Video;
+import com.programming.videoService.repository.HistoryRepository;
 import com.programming.videoService.repository.LikeRepository;
 import com.programming.videoService.repository.SubscriptionRepository;
 
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.bson.types.ObjectId;
+import org.json.JSONObject;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -17,7 +29,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.mongodb.gridfs.GridFsOperations;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,9 +37,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
+import java.util.Properties;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import java.time.Duration;
 
 @Service
 public class VideoService {
@@ -42,11 +63,30 @@ public class VideoService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private KafkaProducer<String, String> kafkaProducer;
+    private KafkaConsumer<String, String> kafkaConsumer;
 
-    private final String VIDEO_CACHE_PREFIX = "video_";
+    public VideoService() {
+        // Kafka Producer Configuration
+        Properties producerProps = new Properties();
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        this.kafkaProducer = new KafkaProducer<>(producerProps);
 
+        // Kafka Consumer Configuration
+        Properties consumerProps = new Properties();
+        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "video-genres-group");
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        this.kafkaConsumer = new KafkaConsumer<>(consumerProps);
+        this.kafkaConsumer.subscribe(Collections.singletonList("video-genres-topic"));
+    }
+
+
+    private static final Logger logger = LoggerFactory.getLogger(VideoService.class);
     public String addVideo(MultipartFile upload, String userID, byte[] thumbnail, Timestamp timestamp, String description, String userName, String videoName)
             throws IOException {
         DBObject videoMetadata = new BasicDBObject();
@@ -72,18 +112,56 @@ public class VideoService {
                 thumbnailMetadata);
 
 
-        // Save video information to Redis
-        Map<String, Object> videoDetails = new HashMap<>();
-        videoDetails.put("videoId", videoID.toString());
-        videoDetails.put("userID", userID);
-        videoDetails.put("title", videoName);
-        videoDetails.put("description", description);
-        videoDetails.put("views", 0);
-        redisTemplate.opsForHash().putAll(VIDEO_CACHE_PREFIX + videoID.toString(), videoDetails);
+    
+        JSONObject kafkaMessage = new JSONObject();
+        kafkaMessage.put("userID", userID);
+        kafkaMessage.put("videoID", videoID.toString());
+        kafkaMessage.put("description", description);
 
+        kafkaProducer.send(new ProducerRecord<>("video-description-topic", videoID.toString(), kafkaMessage.toString()));
 
+        processGenres();
+
+        MDC.put("type", "videoservice");
+        MDC.put("action", "upload");
+        MDC.put("videoid", videoID.toString());
+        logger.info("User " + userID.toString() + " upload a new video");
         return videoID.toString();
     }
+
+    public void processGenres() {
+        new Thread(() -> {
+            while (true) {
+                ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<String, String> record : records) {
+                    try {
+                        String value = record.value();
+                        JSONObject json = new JSONObject(value);
+
+                        String videoID = json.getString("videoID");
+                        List<String> genres = json.getJSONArray("genres").toList().stream()
+                                .map(Object::toString).toList();
+
+                        // Update genres in the database
+                        DBObject query = new BasicDBObject("videoId", videoID);
+                        DBObject update = new BasicDBObject("$set", new BasicDBObject("genres", genres));
+                        // template.getCollection("videos").updateOne(query, update);
+                        Query query1 = new Query(Criteria.where("_id").is(videoID));
+                        Update update1 = new Update().set("genres", genres);
+                        mongoTemplate.updateFirst(query1, update1, "fs.files");
+
+
+                        logger.info("Updated genres for videoID: " + videoID + " with genres: " + genres);
+                    } catch (Exception e) {
+                        logger.error("Error processing genres from Kafka", e);
+                    }
+                }
+            }
+        }).start();
+    }
+
+    
+
 
     public List<String> getAllVideoIDs() {
         Query query = new Query();
@@ -116,6 +194,9 @@ public class VideoService {
 
     public VideoWithStream getVideoWithStream(String id) throws IOException {
         GridFSFile gridFSFile = template.findOne(new Query(Criteria.where("_id").is(id)));
+        MDC.put("type", "videoservice");
+        MDC.put("action", "play-video");
+        logger.info("VideoId: " + id);
         if (gridFSFile != null) {
             return new VideoWithStream(gridFSFile, operations.getResource(gridFSFile).getInputStream());
         }
@@ -167,25 +248,11 @@ public class VideoService {
     }
 
     public Map<String, Object> getDetails(String videoId) {
-        // Checked data in Redis
-        Map<Object, Object> cachedVideo = redisTemplate.opsForHash().entries(VIDEO_CACHE_PREFIX + videoId);
-
-        if (!cachedVideo.isEmpty()) {
-            // Convert cachedVideo to Map<String, Object>
-            Map<String, Object> stringKeyVideoMap = new HashMap<>();
-            cachedVideo.forEach((key, value) -> stringKeyVideoMap.put(String.valueOf(key), value));
-            return stringKeyVideoMap;
-        }
-
         Query query = new Query(Criteria.where("_id").is(videoId));
         DBObject dbObject = mongoTemplate.findOne(query, DBObject.class, "fs.files");
         if (dbObject != null) {
-            Map<String, Object> videoDetails = dbObject.toMap();
-            // Save video information to Redis
-            redisTemplate.opsForHash().putAll(VIDEO_CACHE_PREFIX + videoId, videoDetails);
-            return videoDetails;
+            return dbObject.toMap();
         }
-
         return null;
     }
 
@@ -246,6 +313,55 @@ public class VideoService {
         }
 
         return likedToIds;
+    }
+
+    //Hanlde History
+
+    @Autowired
+    private HistoryRepository historyRepository;
+    
+    public void addHistory(String userId, String thumbId) {
+        History history = new History(userId, thumbId);
+        historyRepository.save(history);
+    }
+
+    public List<String> getHistoryByUserId(String userId) {
+        Query query = new Query(Criteria.where("userId").is(userId)).with(Sort.by(Sort.Direction.DESC, "timestamp"));
+        List<History> histories = mongoTemplate.find(query, History.class);
+
+        Map<String, History> thumbIdMap = new LinkedHashMap<>();
+        for (History history : histories) {
+            thumbIdMap.putIfAbsent(history.getThumbId(), history);
+        }
+
+        List<String> thumbIds = new ArrayList<>(thumbIdMap.keySet());
+
+        return thumbIds;
+    }
+
+    //hanlde Report
+    public void uploadReport(String videoId, String msg, String userId) {
+        Report report = new Report(videoId, msg, userId);
+        mongoTemplate.save(report);
+    }
+
+    public List<String> getReportsWithHighFrequencyVideoIds() {
+        List<Report> reports = mongoTemplate.findAll(Report.class);
+        Map<String, Integer> videoIdCount = new HashMap<>();
+
+        for (Report report : reports) {
+            String videoId = report.getVideoId();
+            videoIdCount.put(videoId, videoIdCount.getOrDefault(videoId, 0) + 1);
+        }
+
+        List<String> highFrequencyVideoIds = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : videoIdCount.entrySet()) {
+            if (entry.getValue() > 5) {
+                highFrequencyVideoIds.add(entry.getKey());
+            }
+        }
+
+        return highFrequencyVideoIds;
     }
     
 }

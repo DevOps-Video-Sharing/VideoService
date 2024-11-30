@@ -1,4 +1,7 @@
 package com.programming.videoService.model;
+
+import java.util.List;
+
 public class Video {
 
     private String filename;
@@ -10,9 +13,15 @@ public class Video {
     private byte[] thumbnail;
     private String userName;
     private String videoName;
-    // private int views;
-    // private int likes;
-    // private int dislikes;
+    private List<String> genres;
+
+    public List<String> getGenres() {
+        return genres;
+    }
+
+    public void setGenres(List<String> genres) {
+        this.genres = genres;
+    }
 
     public String getUserID() {
         return userID;

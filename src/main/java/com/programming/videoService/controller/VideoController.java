@@ -1,8 +1,11 @@
 package com.programming.videoService.controller;
 
 import com.mongodb.client.gridfs.model.GridFSFile;
+import com.programming.videoService.model.Video;
 import com.programming.videoService.service.VideoService;
 import com.programming.videoService.service.VideoService.VideoWithStream;
+
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;
@@ -20,15 +23,21 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+
 @RestController
 @RequestMapping("/video")
 public class VideoController {
 
     @Autowired
     private VideoService videoService;
-
+    private static final Logger logger = LoggerFactory.getLogger(VideoController.class);
     @GetMapping("/")
     public String getServiceName(){
+        MDC.put("type", "videoservice");
+        logger.info("Video Service Start");
         return "Video Service";
     }
 
@@ -174,7 +183,7 @@ public class VideoController {
     }
 
 
-    //Hanlde Subcri
+    //Hanlde Subcribe
     @PostMapping("/subscribe")
     public ResponseEntity<?> subscribe(@RequestParam("subscriberId") String subscriberId,
             @RequestParam("subscribedToId") String subscribedToId) {
@@ -235,6 +244,33 @@ public class VideoController {
     @GetMapping("/getIdFromLikerToId/{likerToId}")
     public ResponseEntity<?> getIdFromLikerToId(@PathVariable String likerToId) {
         return new ResponseEntity<>(videoService.getLikedToIdsFromLikerToId(likerToId), HttpStatus.OK);
+    }
+
+    // Hanlde History
+    @PostMapping("/addHistory")
+    public ResponseEntity<?> addHistory(@RequestParam("userId") String userId,
+            @RequestParam("thumbId") String thumbId) {
+        videoService.addHistory(userId, thumbId);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/getHistoryByUserId/{userId}")
+    public ResponseEntity<?> getHistoryByUserId(@PathVariable String userId) {
+        return new ResponseEntity<>(videoService.getHistoryByUserId(userId), HttpStatus.OK);
+    }
+
+    //handle Report
+    @PostMapping("/uploadReport")
+    public ResponseEntity<?> uploadReport(@RequestParam("videoId") String videoId,
+            @RequestParam("msg") String msg,
+            @RequestParam("userId") String userId) {
+        videoService.uploadReport(videoId, msg, userId);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/videoIdLargerThanFive")
+    public ResponseEntity<?> videoIdLargerThanFive() {
+        return new ResponseEntity<>(videoService.getReportsWithHighFrequencyVideoIds(), HttpStatus.OK);
     }
     
 }
