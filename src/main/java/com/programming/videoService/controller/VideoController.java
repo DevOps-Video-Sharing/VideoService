@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -258,6 +259,24 @@ public class VideoController {
     public ResponseEntity<?> getHistoryByUserId(@PathVariable String userId) {
         return new ResponseEntity<>(videoService.getHistoryByUserId(userId), HttpStatus.OK);
     }
+
+    //Handle Genre
+    @GetMapping("/getGenresByVideoId/{videoId}")
+    public ResponseEntity<?> getGenresByVideoId(@PathVariable String videoId) {
+        return new ResponseEntity<>(videoService.getGenresByVideoId(videoId), HttpStatus.OK);
+    }
+
+    @GetMapping("/getGenresByUserId/{userId}")
+    public ResponseEntity<?> getGenresByUserId(@PathVariable String userId) {
+        try {
+            Map<String, Integer> combinedGenres = videoService.getGenresByUserId(userId);
+            return new ResponseEntity<>(combinedGenres, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error fetching combined genres: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+
 
     //handle Report
     @PostMapping("/uploadReport")

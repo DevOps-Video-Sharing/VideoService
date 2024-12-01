@@ -339,6 +339,46 @@ public class VideoService {
         return thumbIds;
     }
 
+    //Hanle genres
+    public List<String> getGenresByVideoId(String videoId){
+        Query query = new Query(Criteria.where("_id").is(videoId));
+        DBObject dbObject = mongoTemplate.findOne(query, DBObject.class, "fs.files");
+        if (dbObject != null) {
+            return (List<String>) dbObject.get("genres");
+        }
+        return null;
+    }
+
+    public Map<String, Integer> getGenresByUserId(String userId) {
+        // 1. Lấy danh sách thumbnailId từ History
+        List<String> thumbnailIds = getHistoryByUserId(userId);
+    
+        Map<String, Integer> genreCounts = new LinkedHashMap<>();
+    
+        // 2. Duyệt qua từng thumbnailId
+        for (String thumbnailId : thumbnailIds) {
+            try {
+                // Lấy videoId từ thumbnailId
+                String videoId = getVideoIdFromThumbnailId(thumbnailId);
+    
+                // Lấy genres từ videoId
+                List<String> genres = getGenresByVideoId(videoId);
+    
+                // Đếm số lần xuất hiện của từng genre
+                for (String genre : genres) {
+                    genreCounts.put(genre, genreCounts.getOrDefault(genre, 0) + 1);
+                }
+            } catch (Exception e) {
+                // Nếu lỗi, ghi log và tiếp tục
+                System.err.println("Error processing thumbnailId: " + thumbnailId + ", error: " + e.getMessage());
+            }
+        }
+    
+        return genreCounts;
+    }
+    
+    
+
     //hanlde Report
     public void uploadReport(String videoId, String msg, String userId) {
         Report report = new Report(videoId, msg, userId);
