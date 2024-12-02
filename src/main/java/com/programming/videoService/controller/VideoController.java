@@ -130,6 +130,19 @@ public class VideoController {
         return new ResponseEntity<>(videoService.getVideoIdFromThumbnailId(id), HttpStatus.OK);
     }
 
+    @GetMapping("/getThumbnailIdsByVideoId/{videoId}")
+    public ResponseEntity<?> getThumbnailIdsByVideoId(@PathVariable String videoId) {
+        try {
+            List<String> thumbnailIds = videoService.getThumbnailIdsByVideoId(videoId);
+            return new ResponseEntity<>(thumbnailIds, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error fetching thumbnail IDs: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    //hanle views
+
+
     @PutMapping("/updateViews/{id}")
     public ResponseEntity<?> updateViews(@PathVariable String id) {
         videoService.updateViews(id);
@@ -275,7 +288,31 @@ public class VideoController {
             return new ResponseEntity<>("Error fetching combined genres: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
     
+    // Hanle Recommend
+    @GetMapping("/getUniqueVideoIdsByGenres/{userId}")
+    public ResponseEntity<?> getUniqueVideoIdsByGenres(@PathVariable String userId) {
+        try {
+            List<String> uniqueVideoIds = videoService.getUniqueVideoIdsByGenres(userId);
+            return new ResponseEntity<>(uniqueVideoIds, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error fetching video IDs: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/getThumbnailsByUserGenres/{userId}")
+    public ResponseEntity<?> getThumbnailsByUserGenres(@PathVariable String userId) {
+        try {
+            List<String> thumbnailIds = videoService.getThumbnailIdsByUserGenres(userId);
+            return new ResponseEntity<>(thumbnailIds, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error fetching thumbnails: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
 
 
     //handle Report

@@ -39,7 +39,9 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -47,6 +49,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import java.util.Properties;
+import java.util.Set;
+
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import java.time.Duration;
@@ -192,6 +196,19 @@ public class VideoService {
         return gridFSFile.getMetadata().get("videoId").toString();
     }
 
+    public List<String> getThumbnailIdsByVideoId(String videoId) {
+        Query query = Query.query(Criteria.where("metadata.videoId").is(videoId));
+        List<GridFSFile> gridFSFiles = template.find(query).into(new ArrayList<>());
+    
+        List<String> thumbnailIds = new ArrayList<>();
+        for (GridFSFile file : gridFSFiles) {
+            thumbnailIds.add(file.getObjectId().toString());
+        }
+    
+        return thumbnailIds;
+    }
+    
+
     public VideoWithStream getVideoWithStream(String id) throws IOException {
         GridFSFile gridFSFile = template.findOne(new Query(Criteria.where("_id").is(id)));
         MDC.put("type", "videoservice");
@@ -202,6 +219,8 @@ public class VideoService {
         }
         return null;
     }
+
+    //Hanle view
 
     public void updateViews(String id) {
         Query query = new Query(Criteria.where("_id").is(id));
@@ -353,7 +372,7 @@ public class VideoService {
         // 1. Lấy danh sách thumbnailId từ History
         List<String> thumbnailIds = getHistoryByUserId(userId);
     
-        Map<String, Integer> genreCounts = new LinkedHashMap<>();
+        Map<String, Integer> genreCounts = new HashMap<>();
     
         // 2. Duyệt qua từng thumbnailId
         for (String thumbnailId : thumbnailIds) {
@@ -374,12 +393,64 @@ public class VideoService {
             }
         }
     
-        return genreCounts;
+        // 3. Sắp xếp genres theo số lượng giảm dần và giới hạn 12 genres
+        return genreCounts.entrySet().stream()
+            .sorted((entry1, entry2) -> Integer.compare(entry2.getValue(), entry1.getValue())) // Sắp xếp giảm dần theo giá trị
+            .limit(12) // Lấy tối đa 12 genres
+            .collect(LinkedHashMap::new, 
+                     (map, entry) -> map.put(entry.getKey(), entry.getValue()), 
+                     LinkedHashMap::putAll);
+    }
+
+    //handle recommend
+    public List<String> getUniqueVideoIdsByGenres(String userId) {
+        // 1. Lấy danh sách genres và số lần xuất hiện từ API /getGenresByUserId/{userId}
+        Map<String, Integer> genreCounts = getGenresByUserId(userId);
+
+        Set<String> uniqueVideoIds = new LinkedHashSet<>();
+
+        // 2. Tìm videoId theo từng genre
+        for (String genre : genreCounts.keySet()) {
+            Query query = Query.query(Criteria.where("genres").is(genre));
+            List<DBObject> videoFiles = mongoTemplate.find(query, DBObject.class, "fs.files");
+
+            for (DBObject video : videoFiles) {
+                String videoId = video.get("_id").toString();
+                uniqueVideoIds.add(videoId);
+            }
+        }
+
+        // 3. Trả về danh sách videoId (duy nhất, không trùng lặp)
+        return new ArrayList<>(uniqueVideoIds);
+    }
+
+    public List<String> getThumbnailIdsByUserGenres(String userId) {
+        // Bước 1: Lấy genres từ userId
+        Map<String, Integer> genreCounts = getGenresByUserId(userId);
+    
+        // Dùng Set để đảm bảo không có `thumbnailId` trùng lặp
+        Set<String> uniqueThumbnailIds = new LinkedHashSet<>();
+    
+        // Bước 2: Lấy danh sách videoId từ từng genre
+        for (String genre : genreCounts.keySet()) {
+            Query query = Query.query(Criteria.where("genres").is(genre));
+            List<DBObject> videos = mongoTemplate.find(query, DBObject.class, "fs.files");
+            for (DBObject video : videos) {
+                String videoId = video.get("_id").toString();
+    
+                // Bước 3: Lấy danh sách thumbnailId từ videoId
+                List<String> thumbnailIds = getThumbnailIdsByVideoId(videoId);
+                uniqueThumbnailIds.addAll(thumbnailIds);
+            }
+        }
+    
+        // Trả về danh sách thumbnailId duy nhất
+        return new ArrayList<>(uniqueThumbnailIds);
     }
     
-    
+   
 
-    //hanlde Report
+        //hanlde Report
     public void uploadReport(String videoId, String msg, String userId) {
         Report report = new Report(videoId, msg, userId);
         mongoTemplate.save(report);
