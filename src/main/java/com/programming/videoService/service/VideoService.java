@@ -1,5 +1,6 @@
 package com.programming.videoService.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.client.gridfs.model.GridFSFile;
@@ -8,8 +9,10 @@ import com.programming.videoService.model.Like;
 import com.programming.videoService.model.Report;
 import com.programming.videoService.model.Subscription;
 import com.programming.videoService.model.Video;
+import com.programming.videoService.model.Recommender;
 import com.programming.videoService.repository.HistoryRepository;
 import com.programming.videoService.repository.LikeRepository;
+import com.programming.videoService.repository.RecommenderRepository;
 import com.programming.videoService.repository.SubscriptionRepository;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -29,6 +32,9 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.mongodb.gridfs.GridFsOperations;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -50,10 +56,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import java.time.Duration;
+import java.util.Properties;
+
 
 @Service
 public class VideoService {
@@ -69,6 +80,9 @@ public class VideoService {
 
     private KafkaProducer<String, String> kafkaProducer;
     private KafkaConsumer<String, String> kafkaConsumer;
+
+    @Autowired
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     public VideoService() {
         // Kafka Producer Configuration
@@ -447,7 +461,60 @@ public class VideoService {
         // Trả về danh sách thumbnailId duy nhất
         return new ArrayList<>(uniqueThumbnailIds);
     }
-    
+
+
+    private static final String KAFKA_TOPIC = "synonyms_topic";
+    public void processVideoData(String userId, Map<String, Integer> videoData) {
+        try {
+            // Đóng gói dữ liệu thành Map
+            Map<String, Object> message = new HashMap<>();
+            message.put("userId", userId);
+            message.put("videoData", videoData);
+
+            // Sử dụng Jackson để chuyển đổi thành JSON
+            ObjectMapper objectMapper = new ObjectMapper();
+            String jsonMessage = objectMapper.writeValueAsString(message);
+
+            // Gửi JSON đến Kafka
+            kafkaTemplate.send(KAFKA_TOPIC, jsonMessage);
+
+            System.out.println("Processing video data: " + jsonMessage);
+        } catch (Exception e) {
+            System.err.println("Error converting to JSON: " + e.getMessage());
+        }
+    }
+        
+
+    @Autowired
+    private RecommenderRepository recommenderRepository;
+    @KafkaListener(topics = "recommendation_topic")
+    public void consumeMessage(String message) {
+        try {
+            // Manually convert the string to Recommender object
+            JSONObject json = new JSONObject(message);
+            Recommender recommender = new ObjectMapper().readValue(json.toString(), Recommender.class);
+            
+            // Process the recommender object as needed (you can also add more logic here if required)
+            System.out.println("Processing recommendation message: " + recommender);
+
+            // Save the recommender object to the database
+            saveToDatabase(recommender);
+        } catch (Exception e) {
+            logger.error("Error processing recommendation message", e);
+        }
+    }
+
+    private void saveToDatabase(Recommender recommender) {
+        try {
+            // Assuming recommenderRepository is autowired and set up for the Recommender entity
+            recommenderRepository.save(recommender);
+            System.out.println("Saved to DB: " + recommender);
+        } catch (Exception e) {
+            System.err.println("Error saving to DB: " + e.getMessage());
+        }
+    }
+
+
    
 
         //hanlde Report

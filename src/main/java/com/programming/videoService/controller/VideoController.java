@@ -313,6 +313,17 @@ public class VideoController {
 
 
 
+    @PostMapping("/process/{userId}")
+    public String processVideoData(@PathVariable String userId, @RequestBody Map<String, Integer> videoData) {
+
+        // Gọi service để xử lý dữ liệu nếu cần
+        videoService.processVideoData(userId ,videoData);
+
+        return "Data sent to Kafka and processed.";
+    }
+
+
+
 
 
     //handle Report
