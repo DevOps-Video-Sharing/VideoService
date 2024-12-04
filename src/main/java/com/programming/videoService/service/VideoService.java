@@ -521,6 +521,10 @@ public class VideoService {
     public void uploadReport(String videoId, String msg, String userId) {
         Report report = new Report(videoId, msg, userId);
         mongoTemplate.save(report);
+        MDC.put ("type", "videoservice");
+        MDC.put ("action", "report");
+        MDC.put ("videoid", videoId.toString());
+        logger.info ("User " + userId.toString() + " report " + msg);
     }
 
     public List<String> getReportsWithHighFrequencyVideoIds() {
