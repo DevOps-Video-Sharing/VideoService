@@ -19,7 +19,7 @@ public class KafkaConsumerConfig {
     @Bean
     public Map<String, Object> consumerConfigs() {
         Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.2.240:9092");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.120.131:9092");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "video-genres-group"); // Tên group ID
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);

@@ -87,14 +87,14 @@ public class VideoService {
     public VideoService() {
         // Kafka Producer Configuration
         Properties producerProps = new Properties();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.120.131:30392");
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.120.131:9092");
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         this.kafkaProducer = new KafkaProducer<>(producerProps);
 
         // Kafka Consumer Configuration
         Properties consumerProps = new Properties();
-        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.169.120.131:30392");
+        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.169.120.131:9092");
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "video-genres-group");
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
