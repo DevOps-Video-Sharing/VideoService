@@ -30,26 +30,32 @@ jobs:
           mvn clean
           mvn -B package --file pom.xml
       
-      - name: Authenticate
-        uses: google-github-actions/auth@v2
-        with: 
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-          
-      - name: Configure gcloud
-        uses: google-github-actions/setup-gcloud@v2
+      - name: Install OpenVPN
+        run: sudo apt-get update && sudo apt-get install -y openvpn
+    
+      - name: Connect to VPN
+        env:
+          VPN_USERNAME: ${{ secrets.VPN_USERNAME }}
+          VPN_PASSWORD: ${{ secrets.VPN_PASSWORD }}
+        run: |
+          echo "${{ secrets.VPN_PROFILE_BASE64 }}" | base64 --decode > profile-559.ovpn
+          echo -e "${VPN_USERNAME}\n${VPN_PASSWORD}" > vpn-auth.txt
+          sudo openvpn --config profile-559.ovpn --auth-user-pass vpn-auth.txt --daemon
+          sleep 10
+          rm vpn-auth.txt
+          rm profile-559.ovpn
+
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.10
         with:
-          project_id: ${{ env.PROJECT_ID }}
-          install_components: 'gke-gcloud-auth-plugin'
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/K8S
+            sudo kubectl apply -f video-mongo-deployment.yaml
+            sudo kubectl apply -f video-service-deployment.yaml
 
-
-      - name: Set cluster context
-        run: |
-          gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }} --zone ${{ env.ZONE }} --project ${{ env.PROJECT_ID }}
-
-      - name: Apply Kubernetes manifests
-        run: |
-          kubectl apply -f resources.yaml
-  
   notifications:
     needs: deploy
     uses: ./.github/workflows/notifyCD.yaml
