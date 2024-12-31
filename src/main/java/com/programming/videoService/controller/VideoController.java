@@ -21,8 +21,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -310,6 +313,29 @@ public class VideoController {
             return new ResponseEntity<>("Error fetching thumbnails: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/getThumbnailsByUserGenres2/{userId}")
+    public ResponseEntity<?> getThumbnailsByUserGenres2(@PathVariable String userId) {
+        try {
+            // Gọi phương thức getThumbnailsByUserGenres để lấy danh sách đầu tiên
+            List<String> thumbnailsByGenres = videoService.getThumbnailIdsByUserGenres(userId);
+            
+            // Gọi phương thức listIdThumbnail để lấy danh sách thứ hai
+            List<String> allThumbnails = videoService.listIdThumbnail();
+            
+            // Sử dụng Set để xử lý loại bỏ trùng lặp
+            Set<String> uniqueThumbnails = new LinkedHashSet<>(thumbnailsByGenres);
+            uniqueThumbnails.addAll(allThumbnails);
+            
+            // Chuyển Set thành List
+            List<String> combinedThumbnails = new ArrayList<>(uniqueThumbnails);
+            
+            return new ResponseEntity<>(combinedThumbnails, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error fetching thumbnails: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
 
 
