@@ -6,7 +6,7 @@ spring:
     name: video-service
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://10.32.0.14:27017/video-service}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://10.32.0.6:27017/video-service}
   
   
   kafka:
